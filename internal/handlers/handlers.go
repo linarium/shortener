@@ -13,6 +13,10 @@ type URLHandler struct {
 	shortener *service.URLShortener
 }
 
+func NewURLHandler() *URLHandler {
+	return &URLHandler{shortener: service.NewURLShortener()}
+}
+
 func (h *URLHandler) createShortURL(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		return
@@ -34,7 +38,7 @@ func (h *URLHandler) createShortURL(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	shortURL := h.shortener.ShortenURL(string(body))
+	shortURL := h.shortener.Shorten(string(body))
 
 	resultURL := fmt.Sprintf("http://localhost:8080/%s", shortURL)
 
@@ -54,7 +58,7 @@ func (h *URLHandler) getURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	url, exists := h.shortener.ExpandURL(id)
+	url, exists := h.shortener.Expand(id)
 
 	if !exists {
 		http.Error(w, "URL not found", http.StatusBadRequest)
@@ -62,4 +66,18 @@ func (h *URLHandler) getURL(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
+}
+
+func Router() chi.Router {
+	r := chi.NewRouter()
+	handler := NewURLHandler()
+
+	r.Post("/", handler.createShortURL)
+	r.Get("/{id}", handler.getURL)
+
+	r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+	})
+
+	return r
 }
