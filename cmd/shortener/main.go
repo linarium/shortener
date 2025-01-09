@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
+	"github.com/linarium/shortener/internal/config"
 	"io"
 	"net/http"
 )
@@ -73,6 +74,9 @@ func getOrCreateUrl(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	cfg := config.InitConfig()
+	fmt.Println("Конфигурация:", cfg)
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", getOrCreateUrl)
 
