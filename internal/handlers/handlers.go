@@ -19,11 +19,13 @@ func NewURLHandler() *URLHandler {
 
 func (h *URLHandler) createShortURL(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
+		http.Error(w, "Incorrect method", http.StatusBadRequest)
 		return
 	}
 
 	contentType := r.Header.Get("Content-Type")
 	if !strings.HasPrefix(contentType, "text/plain") {
+		http.Error(w, "Incorrect content type", http.StatusBadRequest)
 		return
 	}
 
@@ -49,6 +51,7 @@ func (h *URLHandler) createShortURL(w http.ResponseWriter, r *http.Request) {
 
 func (h *URLHandler) getURL(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
+		http.Error(w, "Incorrect method", http.StatusBadRequest)
 		return
 	}
 
