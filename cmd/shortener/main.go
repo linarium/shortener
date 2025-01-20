@@ -1,9 +1,11 @@
 package main
 
 import (
+	"log"
+	"net/http"
+
 	"github.com/linarium/shortener/internal/config"
 	"github.com/linarium/shortener/internal/handlers"
-	"net/http"
 )
 
 func main() {
@@ -12,6 +14,6 @@ func main() {
 	r := handlers.Router(cfg)
 	err := http.ListenAndServe(`:8080`, r)
 	if err != nil {
-		panic(err)
+		log.Fatalf("Сбой в работе сервера: %v", err)
 	}
 }

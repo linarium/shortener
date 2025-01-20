@@ -3,6 +3,7 @@ package service
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"log"
 	"sync"
 )
 
@@ -45,7 +46,7 @@ func (s *URLShortener) generateShortKey() string {
 	b := make([]byte, 6)
 	_, err := rand.Read(b)
 	if err != nil {
-		panic(err)
+		log.Fatalf("Ошибка при генерации сокращённого URL: %v", err)
 	}
 	return base64.URLEncoding.EncodeToString(b)[:8]
 }

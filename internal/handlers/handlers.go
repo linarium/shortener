@@ -1,12 +1,13 @@
 package handlers
 
 import (
-	"github.com/go-chi/chi/v5"
-	"github.com/linarium/shortener/internal/config"
-	"github.com/linarium/shortener/internal/service"
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/linarium/shortener/internal/config"
+	"github.com/linarium/shortener/internal/service"
 )
 
 const defaultContentType = "text/plain"
