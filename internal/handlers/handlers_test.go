@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"github.com/linarium/shortener/internal/config"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -10,7 +11,12 @@ import (
 )
 
 func TestCreateShortURL(t *testing.T) {
-	handler := NewURLHandler()
+	cfg := config.Config{
+		ServerAddress: "localhost:8080",
+		BaseURL:       "http://localhost:8080",
+	}
+
+	handler := NewURLHandler(cfg)
 
 	tests := []struct {
 		name           string
@@ -80,7 +86,11 @@ func TestCreateShortURL(t *testing.T) {
 }
 
 func TestGetURL(t *testing.T) {
-	handler := NewURLHandler()
+	cfg := config.Config{
+		ServerAddress: "localhost:8080",
+		BaseURL:       "http://localhost:8080",
+	}
+	handler := NewURLHandler(cfg)
 
 	originalURL := "http://example.com"
 	shortURL := handler.shortener.Shorten(originalURL)
