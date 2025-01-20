@@ -11,8 +11,8 @@ type Config struct {
 	BaseURL       string
 }
 
-func InitConfig() *Config {
-	cfg := &Config{}
+func InitConfig() Config {
+	cfg := Config{}
 
 	// Получаем значения из переменных окружения
 	serverAddress := os.Getenv("SERVER_ADDRESS")
@@ -20,7 +20,6 @@ func InitConfig() *Config {
 
 	flag.StringVar(&cfg.ServerAddress, "a", "localhost:8080", "Адрес запуска HTTP-сервера")
 	flag.StringVar(&cfg.BaseURL, "b", "http://localhost:8080", "Базовый адрес для сокращённого URL")
-
 	flag.Parse()
 
 	// Приоритет: переменные окружения > флаги > значения по умолчанию
@@ -29,10 +28,6 @@ func InitConfig() *Config {
 	}
 	if baseURL != "" {
 		cfg.BaseURL = baseURL
-	}
-
-	if cfg.BaseURL[len(cfg.BaseURL)-1] != '/' {
-		cfg.BaseURL += "/"
 	}
 
 	return cfg

@@ -7,9 +7,9 @@ import (
 )
 
 func main() {
-	config.InitConfig()
+	cfg := config.InitConfig()
 
-	r := handlers.Router()
+	r := handlers.Router(cfg)
 	err := http.ListenAndServe(`:8080`, r)
 	if err != nil {
 		panic(err)

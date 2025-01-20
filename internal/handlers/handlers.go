@@ -1,20 +1,26 @@
 package handlers
 
 import (
-	"fmt"
 	"github.com/go-chi/chi/v5"
+	"github.com/linarium/shortener/internal/config"
 	"github.com/linarium/shortener/internal/service"
 	"io"
 	"net/http"
 	"strings"
 )
 
+const defaultContentType = "text/plain"
+
 type URLHandler struct {
 	shortener *service.URLShortener
+	config    config.Config
 }
 
-func NewURLHandler() *URLHandler {
-	return &URLHandler{shortener: service.NewURLShortener()}
+func NewURLHandler(cfg config.Config) *URLHandler {
+	return &URLHandler{
+		shortener: service.NewURLShortener(),
+		config:    cfg,
+	}
 }
 
 func (h *URLHandler) createShortURL(w http.ResponseWriter, r *http.Request) {
@@ -24,7 +30,7 @@ func (h *URLHandler) createShortURL(w http.ResponseWriter, r *http.Request) {
 	}
 
 	contentType := r.Header.Get("Content-Type")
-	if !strings.HasPrefix(contentType, "text/plain") {
+	if !strings.HasPrefix(contentType, defaultContentType) {
 		http.Error(w, "Incorrect content type", http.StatusBadRequest)
 		return
 	}
@@ -41,10 +47,10 @@ func (h *URLHandler) createShortURL(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	shortURL := h.shortener.Shorten(string(body))
+	host := h.config.BaseURL
+	resultURL := host + "/" + shortURL
 
-	resultURL := fmt.Sprintf("http://localhost:8080/%s", shortURL)
-
-	w.Header().Set("Content-Type", "text/plain")
+	w.Header().Set("Content-Type", defaultContentType)
 	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte(resultURL))
 }
@@ -71,9 +77,9 @@ func (h *URLHandler) getURL(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
-func Router() chi.Router {
+func Router(cfg config.Config) chi.Router {
 	r := chi.NewRouter()
-	handler := NewURLHandler()
+	handler := NewURLHandler(cfg)
 
 	r.Post("/", handler.createShortURL)
 	r.Get("/{id}", handler.getURL)
