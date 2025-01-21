@@ -4,38 +4,15 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"log"
-	"sync"
 )
 
-type URLStorage interface {
+type Storage interface {
 	SaveShortURL(short, long string)
 	GetLongURL(short string) (string, bool)
 }
 
-type MemoryStorage struct {
-	urls map[string]string
-	mu   sync.RWMutex
-}
-
-func NewMemoryStorage() *MemoryStorage {
-	return &MemoryStorage{urls: make(map[string]string)}
-}
-
-func (s *MemoryStorage) SaveShortURL(short, long string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.urls[short] = long
-}
-
-func (s *MemoryStorage) GetLongURL(short string) (string, bool) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	long, exists := s.urls[short]
-	return long, exists
-}
-
 type URLShortener struct {
-	storage URLStorage
+	storage Storage
 }
 
 func NewURLShortener() *URLShortener {
