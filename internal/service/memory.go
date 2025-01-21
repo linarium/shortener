@@ -7,10 +7,6 @@ type MemoryStorage struct {
 	mu   sync.RWMutex
 }
 
-func NewMemoryStorage() *MemoryStorage {
-	return &MemoryStorage{data: make(map[string]string)}
-}
-
 func (s *MemoryStorage) SaveShortURL(short, long string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

@@ -15,6 +15,10 @@ type URLShortener struct {
 	storage Storage
 }
 
+func NewMemoryStorage() *MemoryStorage {
+	return &MemoryStorage{data: make(map[string]string)}
+}
+
 func NewURLShortener() *URLShortener {
 	return &URLShortener{storage: NewMemoryStorage()}
 }
