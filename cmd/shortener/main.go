@@ -12,7 +12,7 @@ func main() {
 	cfg := config.InitConfig()
 
 	r := handlers.Router(cfg)
-	err := http.ListenAndServe(`:8080`, r)
+	err := http.ListenAndServe(cfg.ServerAddress, r)
 	if err != nil {
 		log.Fatalf("Сбой в работе сервера: %v", err)
 	}
