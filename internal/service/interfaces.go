@@ -3,7 +3,8 @@ package service
 import (
 	"crypto/rand"
 	"encoding/base64"
-	"log"
+
+	"github.com/linarium/shortener/internal/logger"
 )
 
 type Storage interface {
@@ -27,7 +28,7 @@ func (s *URLShortener) generateShortKey() string {
 	b := make([]byte, 6)
 	_, err := rand.Read(b)
 	if err != nil {
-		log.Fatalf("Ошибка при генерации сокращённого URL: %v", err)
+		logger.Sugar.Fatalf("Ошибка при генерации сокращённого URL: %v", err)
 	}
 	return base64.URLEncoding.EncodeToString(b)[:8]
 }

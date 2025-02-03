@@ -118,6 +118,8 @@ func Router(cfg config.Config) chi.Router {
 	r := chi.NewRouter()
 	handler := NewURLHandler(cfg)
 
+	r.Use(WithLogging)
+
 	r.Post("/", handler.createShortURL)
 	r.Post("/api/shorten", handler.createShortURL)
 	r.Get("/{id}", handler.getURL)

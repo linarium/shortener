@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	"github.com/linarium/shortener/internal/logger"
 	"net/http"
 
 	"github.com/linarium/shortener/internal/config"
@@ -11,9 +11,12 @@ import (
 func main() {
 	cfg := config.InitConfig()
 
+	logger.Initialize()
+	defer logger.Sugar.Sync()
+
 	r := handlers.Router(cfg)
 	err := http.ListenAndServe(cfg.ServerAddress, r)
 	if err != nil {
-		log.Fatalf("Сбой в работе сервера: %v", err)
+		logger.Sugar.Fatalf("Сбой в работе сервера: %v", err)
 	}
 }
