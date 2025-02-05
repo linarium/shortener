@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"github.com/linarium/shortener/internal/config"
+	"github.com/linarium/shortener/internal/service"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -15,8 +16,10 @@ func TestCreateShortURL(t *testing.T) {
 		ServerAddress: "localhost:8080",
 		BaseURL:       "http://localhost:8080",
 	}
+	storage, _ := service.NewMemoryStorage()
+	shortener := service.NewURLShortener(storage)
 
-	handler := NewURLHandler(cfg)
+	handler := NewURLHandler(cfg, shortener)
 
 	tests := []struct {
 		name           string
@@ -38,14 +41,6 @@ func TestCreateShortURL(t *testing.T) {
 			name:           "Invalid method",
 			method:         http.MethodGet,
 			contentType:    "text/plain",
-			body:           "http://example.com",
-			expectedStatus: http.StatusBadRequest,
-			expectedBody:   "",
-		},
-		{
-			name:           "Invalid content type",
-			method:         http.MethodPost,
-			contentType:    "application/json",
 			body:           "http://example.com",
 			expectedStatus: http.StatusBadRequest,
 			expectedBody:   "",
@@ -90,7 +85,10 @@ func TestGetURL(t *testing.T) {
 		ServerAddress: "localhost:8080",
 		BaseURL:       "http://localhost:8080",
 	}
-	handler := NewURLHandler(cfg)
+	storage, _ := service.NewMemoryStorage()
+	shortener := service.NewURLShortener(storage)
+
+	handler := NewURLHandler(cfg, shortener)
 
 	originalURL := "http://example.com"
 	shortURL := handler.shortener.Shorten(originalURL)

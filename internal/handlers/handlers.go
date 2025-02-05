@@ -2,13 +2,11 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/go-chi/chi/v5"
 	"github.com/linarium/shortener/internal/config"
 	"github.com/linarium/shortener/internal/service"
 	"io"
 	"net/http"
-	"strings"
 )
 
 const defaultContentType = "text/plain"
@@ -18,11 +16,32 @@ type URLHandler struct {
 	config    config.Config
 }
 
-func NewURLHandler(cfg config.Config) *URLHandler {
+func NewURLHandler(cfg config.Config, shortener *service.URLShortener) *URLHandler {
 	return &URLHandler{
-		shortener: service.NewURLShortener(),
+		shortener: shortener,
 		config:    cfg,
 	}
+}
+
+func (h *URLHandler) createJSONShortURL(w http.ResponseWriter, r *http.Request) {
+	var request struct {
+		URL string `json:"url"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		http.Error(w, "Failed to parse request body", http.StatusBadRequest)
+		return
+	}
+
+	shortURL := h.shortener.Shorten(request.URL)
+
+	response := struct {
+		Result string `json:"result"`
+	}{
+		Result: h.config.BaseURL + "/" + shortURL,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }
 
 func (h *URLHandler) createShortURL(w http.ResponseWriter, r *http.Request) {
@@ -42,62 +61,19 @@ func (h *URLHandler) createShortURL(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	contentType := r.Header.Get("Content-Type")
 	var input string
 
-	if !strings.HasPrefix(contentType, defaultContentType) {
-		var data map[string]interface{}
-		err = json.Unmarshal(body, &data)
-		if err != nil {
-			http.Error(w, "Failed to parse request body", http.StatusBadRequest)
-			return
-		}
+	input = string(body)
+	w.Header().Set("Content-Type", defaultContentType)
+	shortURL := h.shortener.Shorten(input)
+	host := h.config.BaseURL
+	resultURL := host + "/" + shortURL
 
-		value, ok := data["url"]
-		if !ok {
-			http.Error(w, "Invalid request body", http.StatusBadRequest)
-			return
-		}
-		input = fmt.Sprintf("%v", value)
-		w.Header().Set("Content-Type", "application/json")
-
-		shortURL := h.shortener.Shorten(input)
-		host := h.config.BaseURL
-		resultURL := host + "/" + shortURL
-
-		response := struct {
-			Result string `json:"result"`
-		}{
-			Result: resultURL,
-		}
-		jsonResponse, err := json.Marshal(response)
-		if err != nil {
-			http.Error(w, "Failed to encode JSON response", http.StatusInternalServerError)
-			return
-		}
-
-		w.WriteHeader(http.StatusCreated)
-		w.Write(jsonResponse)
-
-	} else {
-		input = string(body)
-		w.Header().Set("Content-Type", defaultContentType)
-		shortURL := h.shortener.Shorten(input)
-		host := h.config.BaseURL
-		resultURL := host + "/" + shortURL
-
-		w.WriteHeader(http.StatusCreated)
-		w.Write([]byte(resultURL))
-	}
-
+	w.WriteHeader(http.StatusCreated)
+	w.Write([]byte(resultURL))
 }
 
 func (h *URLHandler) getURL(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Incorrect method", http.StatusBadRequest)
-		return
-	}
-
 	id := chi.URLParam(r, "id")
 	if id == "" {
 		http.Error(w, "Missing id parameter", http.StatusBadRequest)
@@ -114,14 +90,15 @@ func (h *URLHandler) getURL(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
-func Router(cfg config.Config) chi.Router {
+func Router(cfg config.Config, shortener *service.URLShortener) chi.Router {
 	r := chi.NewRouter()
-	handler := NewURLHandler(cfg)
+
+	handler := NewURLHandler(cfg, shortener)
 
 	r.Use(WithLogging)
 
 	r.Post("/", handler.createShortURL)
-	r.Post("/api/shorten", handler.createShortURL)
+	r.Post("/api/shorten", handler.createJSONShortURL)
 	r.Get("/{id}", handler.getURL)
 
 	r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {

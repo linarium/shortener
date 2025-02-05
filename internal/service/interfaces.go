@@ -3,25 +3,21 @@ package service
 import (
 	"crypto/rand"
 	"encoding/base64"
-
 	"github.com/linarium/shortener/internal/logger"
+	"github.com/linarium/shortener/internal/models"
 )
 
-type Storage interface {
-	SaveShortURL(short, long string)
-	GetLongURL(short string) (string, bool)
+type Shortener interface {
+	Shorten(url string) (string, error)
+	Expand(shortURL string) (string, bool)
 }
 
 type URLShortener struct {
 	storage Storage
 }
 
-func NewMemoryStorage() *MemoryStorage {
-	return &MemoryStorage{data: make(map[string]string)}
-}
-
-func NewURLShortener() *URLShortener {
-	return &URLShortener{storage: NewMemoryStorage()}
+func NewURLShortener(storage Storage) *URLShortener {
+	return &URLShortener{storage: storage}
 }
 
 func (s *URLShortener) generateShortKey() string {
@@ -35,7 +31,8 @@ func (s *URLShortener) generateShortKey() string {
 
 func (s *URLShortener) Shorten(longURL string) string {
 	shortKey := s.generateShortKey()
-	s.storage.SaveShortURL(shortKey, longURL)
+	model := models.URL{ShortURL: shortKey, OriginalURL: longURL}
+	s.storage.SaveShortURL(model)
 	return shortKey
 }
 
