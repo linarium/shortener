@@ -98,9 +98,9 @@ func Router(cfg config.Config, shortener *service.URLShortener) chi.Router {
 
 	r.Use(WithLogging)
 
-	r.Post("/", handler.createShortURL)
-	r.Post("/api/shorten", handler.createJSONShortURL)
-	r.Get("/{id}", handler.getURL)
+	r.Post("/", Compressor(handler.createShortURL))
+	r.Post("/api/shorten", Compressor(handler.createJSONShortURL))
+	r.Get("/{id}", Compressor(handler.getURL))
 
 	r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
