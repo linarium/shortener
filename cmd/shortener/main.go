@@ -10,7 +10,10 @@ import (
 )
 
 func main() {
-	cfg := config.InitConfig()
+	cfg, err := config.InitConfig()
+	if err != nil {
+		logger.Sugar.Fatalf("Ошибка инициализации конфигурации: %v\n", err)
+	}
 
 	logger.Initialize()
 	defer logger.Sugar.Sync()

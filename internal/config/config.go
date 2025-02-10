@@ -3,7 +3,9 @@ package config
 import (
 	"flag"
 	"fmt"
+	"net/url"
 	"os"
+	"path/filepath"
 )
 
 type Config struct {
@@ -12,7 +14,7 @@ type Config struct {
 	FileStoragePath string
 }
 
-func InitConfig() Config {
+func InitConfig() (Config, error) {
 	cfg := Config{}
 
 	// Получаем значения из переменных окружения
@@ -36,7 +38,33 @@ func InitConfig() Config {
 		cfg.FileStoragePath = fileStoragePath
 	}
 
-	return cfg
+	if err := validateConfig(cfg); err != nil {
+		return Config{}, err
+	}
+
+	return cfg, nil
+}
+
+func validateConfig(cfg Config) error {
+	if cfg.ServerAddress == "" {
+		return fmt.Errorf("ServerAddress не может быть пустым")
+	}
+
+	if cfg.BaseURL == "" {
+		return fmt.Errorf("BaseURL не может быть пустым")
+	}
+	if _, err := url.ParseRequestURI(cfg.BaseURL); err != nil {
+		return fmt.Errorf("BaseURL должен быть корректным URL: %v", err)
+	}
+
+	if cfg.FileStoragePath == "" {
+		return fmt.Errorf("FileStoragePath не может быть пустым")
+	}
+	if !filepath.IsAbs(cfg.FileStoragePath) {
+		return fmt.Errorf("FileStoragePath должен быть абсолютным путём")
+	}
+
+	return nil
 }
 
 // String возвращает строковое представление конфигурации

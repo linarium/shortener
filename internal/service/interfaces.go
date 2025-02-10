@@ -7,6 +7,12 @@ import (
 	"github.com/linarium/shortener/internal/models"
 )
 
+type Storage interface {
+	SaveShortURL(model models.URL) error
+	GetLongURL(short string) (string, bool)
+	Close() error
+}
+
 type Shortener interface {
 	Shorten(url string) (string, error)
 	Expand(shortURL string) (string, bool)

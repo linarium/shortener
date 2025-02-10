@@ -90,21 +90,3 @@ func (h *URLHandler) getURL(w http.ResponseWriter, r *http.Request) {
 
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
-
-func Router(cfg config.Config, shortener *service.URLShortener) chi.Router {
-	r := chi.NewRouter()
-
-	handler := NewURLHandler(cfg, shortener)
-
-	r.Use(WithLogging)
-
-	r.Post("/", Compressor(handler.createShortURL))
-	r.Post("/api/shorten", Compressor(handler.createJSONShortURL))
-	r.Get("/{id}", Compressor(handler.getURL))
-
-	r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusBadRequest)
-	})
-
-	return r
-}
