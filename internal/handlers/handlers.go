@@ -62,9 +62,7 @@ func (h *URLHandler) createShortURL(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	var input string
-
-	input = string(body)
+	input := string(body)
 	w.Header().Set("Content-Type", defaultContentType)
 	shortURL := h.shortener.Shorten(input)
 	host := h.config.BaseURL
