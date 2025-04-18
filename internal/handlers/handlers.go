@@ -1,12 +1,14 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
+	"io"
+	"net/http"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/linarium/shortener/internal/config"
 	"github.com/linarium/shortener/internal/service"
-	"io"
-	"net/http"
 )
 
 const defaultContentType = "text/plain"
@@ -87,4 +89,20 @@ func (h *URLHandler) getURL(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
+}
+
+func (h *URLHandler) PingDB(w http.ResponseWriter, r *http.Request) {
+	db, err := sql.Open("pgx", h.config.DatabaseDSN)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	defer db.Close()
+
+	if err := db.Ping(); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
