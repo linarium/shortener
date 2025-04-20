@@ -1,13 +1,11 @@
 package handlers
 
 import (
-	"database/sql"
 	"encoding/json"
 	"io"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/linarium/shortener/internal/config"
 	"github.com/linarium/shortener/internal/service"
 )
@@ -35,7 +33,7 @@ func (h *URLHandler) createJSONShortURL(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	shortURL := h.shortener.Shorten(request.URL)
+	shortURL := h.shortener.Shorten(r.Context(), request.URL)
 
 	response := struct {
 		Result string `json:"result"`
@@ -67,7 +65,7 @@ func (h *URLHandler) createShortURL(w http.ResponseWriter, r *http.Request) {
 
 	input := string(body)
 	w.Header().Set("Content-Type", defaultContentType)
-	shortURL := h.shortener.Shorten(input)
+	shortURL := h.shortener.Shorten(r.Context(), input)
 	host := h.config.BaseURL
 	resultURL := host + "/" + shortURL
 
@@ -82,7 +80,7 @@ func (h *URLHandler) getURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	url, exists := h.shortener.Expand(id)
+	url, exists := h.shortener.Expand(r.Context(), id)
 
 	if !exists {
 		http.Error(w, "URL not found", http.StatusBadRequest)
@@ -93,14 +91,14 @@ func (h *URLHandler) getURL(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *URLHandler) PingDB(w http.ResponseWriter, r *http.Request) {
-	db, err := sql.Open("pgx", h.config.DatabaseDSN)
+	db, err := service.NewDB(h.config.DatabaseDSN)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	defer db.Close()
 
-	if err := db.Ping(); err != nil {
+	if err := db.PingContext(r.Context()); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

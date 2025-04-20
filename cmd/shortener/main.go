@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
+	"net/http"
+
 	"github.com/linarium/shortener/internal/logger"
 	"github.com/linarium/shortener/internal/service"
-	"net/http"
 
 	"github.com/linarium/shortener/internal/config"
 	"github.com/linarium/shortener/internal/handlers"
@@ -18,7 +20,7 @@ func main() {
 	logger.Initialize()
 	defer logger.Sugar.Sync()
 
-	storage, err := service.NewFileStorage(cfg.FileStoragePath)
+	storage, err := service.NewDBStorage(context.Background(), "pgx", cfg.DatabaseDSN)
 	if err != nil {
 		logger.Sugar.Fatalf("Ошибка при создании хранилища: %v", err)
 	}

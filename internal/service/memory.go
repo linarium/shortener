@@ -1,8 +1,10 @@
 package service
 
 import (
-	"github.com/linarium/shortener/internal/models"
+	"context"
 	"sync"
+
+	"github.com/linarium/shortener/internal/models"
 )
 
 type MemoryStorage struct {
@@ -10,18 +12,18 @@ type MemoryStorage struct {
 	mu   sync.RWMutex
 }
 
-func NewMemoryStorage() (*MemoryStorage, error) {
+func NewMemoryStorage(ctx context.Context) (*MemoryStorage, error) {
 	return &MemoryStorage{data: make(map[string]string)}, nil
 }
 
-func (s *MemoryStorage) SaveShortURL(model models.URL) error {
+func (s *MemoryStorage) SaveShortURL(ctx context.Context, model models.URL) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.data[model.ShortURL] = model.OriginalURL
 	return nil
 }
 
-func (s *MemoryStorage) GetLongURL(short string) (string, bool) {
+func (s *MemoryStorage) GetLongURL(ctx context.Context, short string) (string, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	long, exists := s.data[short]

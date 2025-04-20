@@ -1,12 +1,14 @@
 package handlers
 
 import (
-	"github.com/linarium/shortener/internal/config"
-	"github.com/linarium/shortener/internal/service"
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/linarium/shortener/internal/config"
+	"github.com/linarium/shortener/internal/service"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -16,7 +18,7 @@ func TestCreateShortURL(t *testing.T) {
 		ServerAddress: "localhost:8080",
 		BaseURL:       "http://localhost:8080",
 	}
-	storage, _ := service.NewMemoryStorage()
+	storage, _ := service.NewMemoryStorage(context.Background())
 	shortener := service.NewURLShortener(storage)
 
 	handler := NewURLHandler(cfg, shortener)
@@ -85,13 +87,13 @@ func TestGetURL(t *testing.T) {
 		ServerAddress: "localhost:8080",
 		BaseURL:       "http://localhost:8080",
 	}
-	storage, _ := service.NewMemoryStorage()
+	storage, _ := service.NewMemoryStorage(context.Background())
 	shortener := service.NewURLShortener(storage)
 
 	handler := NewURLHandler(cfg, shortener)
 
 	originalURL := "http://example.com"
-	shortURL := handler.shortener.Shorten(originalURL)
+	shortURL := handler.shortener.Shorten(context.Background(), originalURL)
 
 	tests := []struct {
 		name           string
