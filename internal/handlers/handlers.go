@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/linarium/shortener/internal/config"
 	"github.com/linarium/shortener/internal/service"
 )

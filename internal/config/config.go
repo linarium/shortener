@@ -27,7 +27,7 @@ func InitConfig() (Config, error) {
 	flag.StringVar(&cfg.ServerAddress, "a", "localhost:8080", "Адрес запуска HTTP-сервера")
 	flag.StringVar(&cfg.BaseURL, "b", "http://localhost:8080", "Базовый адрес для сокращённого URL")
 	flag.StringVar(&cfg.FileStoragePath, "f", "/tmp/shortener.json", "Путь до файла для сохранения данных")
-	flag.StringVar(&cfg.DatabaseDSN, "d", "postgres://postgres:postgres@db:5432/shortener_db?sslmode=disable", "Database DSN")
+	flag.StringVar(&cfg.DatabaseDSN, "d", "", "Database DSN")
 	flag.Parse()
 
 	// Приоритет: переменные окружения > флаги > значения по умолчанию
