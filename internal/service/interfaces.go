@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 
+	"github.com/google/uuid"
 	"github.com/linarium/shortener/internal/config"
 	"github.com/linarium/shortener/internal/logger"
 	"github.com/linarium/shortener/internal/models"
@@ -52,7 +53,11 @@ func (s *URLShortener) generateShortKey() string {
 
 func (s *URLShortener) Shorten(ctx context.Context, longURL string) string {
 	shortKey := s.generateShortKey()
-	model := models.URL{ShortURL: shortKey, OriginalURL: longURL}
+	model := models.URL{
+		ID:          uuid.New().String(),
+		ShortURL:    shortKey,
+		OriginalURL: longURL,
+	}
 	s.storage.SaveShortURL(ctx, model)
 	return shortKey
 }
