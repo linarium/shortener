@@ -20,7 +20,7 @@ func main() {
 	logger.Initialize()
 	defer logger.Sugar.Sync()
 
-	storage, err := service.NewDBStorage(context.Background(), "pgx", cfg.DatabaseDSN)
+	storage, err := service.NewStorage(context.Background(), cfg)
 	if err != nil {
 		logger.Sugar.Fatalf("Ошибка при создании хранилища: %v", err)
 	}

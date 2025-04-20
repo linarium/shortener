@@ -5,9 +5,22 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 
+	"github.com/linarium/shortener/internal/config"
 	"github.com/linarium/shortener/internal/logger"
 	"github.com/linarium/shortener/internal/models"
 )
+
+func NewStorage(ctx context.Context, cfg config.Config) (Storage, error) {
+	if cfg.DatabaseDSN != "" {
+		return NewDBStorage(ctx, "pgx", cfg.DatabaseDSN)
+	}
+
+	if cfg.FileStoragePath != "" {
+		return NewFileStorage(cfg.FileStoragePath)
+	}
+
+	return NewMemoryStorage(ctx)
+}
 
 type Storage interface {
 	SaveShortURL(ctx context.Context, model models.URL) error
