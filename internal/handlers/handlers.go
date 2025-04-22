@@ -2,11 +2,14 @@ package handlers
 
 import (
 	"encoding/json"
-	"github.com/go-chi/chi/v5"
-	"github.com/linarium/shortener/internal/config"
-	"github.com/linarium/shortener/internal/service"
+	"fmt"
 	"io"
 	"net/http"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/linarium/shortener/internal/config"
+	"github.com/linarium/shortener/internal/models"
+	"github.com/linarium/shortener/internal/service"
 )
 
 const defaultContentType = "text/plain"
@@ -32,7 +35,7 @@ func (h *URLHandler) createJSONShortURL(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	shortURL := h.shortener.Shorten(request.URL)
+	shortURL := h.shortener.Shorten(r.Context(), request.URL)
 
 	response := struct {
 		Result string `json:"result"`
@@ -64,7 +67,7 @@ func (h *URLHandler) createShortURL(w http.ResponseWriter, r *http.Request) {
 
 	input := string(body)
 	w.Header().Set("Content-Type", defaultContentType)
-	shortURL := h.shortener.Shorten(input)
+	shortURL := h.shortener.Shorten(r.Context(), input)
 	host := h.config.BaseURL
 	resultURL := host + "/" + shortURL
 
@@ -79,7 +82,7 @@ func (h *URLHandler) getURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	url, exists := h.shortener.Expand(id)
+	url, exists := h.shortener.Expand(r.Context(), id)
 
 	if !exists {
 		http.Error(w, "URL not found", http.StatusBadRequest)
@@ -87,4 +90,49 @@ func (h *URLHandler) getURL(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
+}
+
+func (h *URLHandler) PingDB(w http.ResponseWriter, r *http.Request) {
+	db, err := service.NewDB(h.config.DatabaseDSN)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	defer db.Close()
+
+	if err := db.PingContext(r.Context()); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *URLHandler) ShortenBatch(w http.ResponseWriter, r *http.Request) {
+	var req models.BatchRequest
+	defer r.Body.Close()
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid JSON format", http.StatusBadRequest)
+		return
+	}
+
+	if len(req) == 0 {
+		http.Error(w, "Empty batch request", http.StatusBadRequest)
+		return
+	}
+
+	resp, err := h.shortener.ShortenBatch(r.Context(), req, h.config.BaseURL)
+	if err != nil {
+		fmt.Println(err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		fmt.Println(err)
+	}
 }
