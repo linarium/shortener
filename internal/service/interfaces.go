@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
-	"path"
 
 	"github.com/google/uuid"
 	"github.com/linarium/shortener/internal/config"
@@ -84,7 +83,7 @@ func (s *URLShortener) ShortenBatch(ctx context.Context, longs models.BatchReque
 		}
 		shorts[i] = models.BatchResponseItem{
 			CorrelationID: long.CorrelationID,
-			ShortURL:      path.Join(baseURL, shortKey),
+			ShortURL:      baseURL + "/" + shortKey,
 		}
 	}
 
