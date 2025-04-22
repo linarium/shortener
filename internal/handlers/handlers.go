@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 
@@ -110,28 +111,28 @@ func (h *URLHandler) PingDB(w http.ResponseWriter, r *http.Request) {
 func (h *URLHandler) ShortenBatch(w http.ResponseWriter, r *http.Request) {
 	var req models.BatchRequest
 	defer r.Body.Close()
-	err := json.NewDecoder(r.Body).Decode(&req)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid JSON format", http.StatusBadRequest)
 		return
 	}
 
 	if len(req) == 0 {
-		w.WriteHeader(http.StatusInternalServerError)
+		http.Error(w, "Empty batch request", http.StatusBadRequest)
 		return
 	}
 
-	resp, err := h.shortener.ShortenBatch(r.Context(), req, h.config.BaseURL+"/")
+	resp, err := h.shortener.ShortenBatch(r.Context(), req, h.config.BaseURL)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Println(err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	err = json.NewEncoder(w).Encode(resp)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		fmt.Println(err)
 	}
 }

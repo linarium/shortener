@@ -6,26 +6,28 @@ import (
 	"fmt"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/jmoiron/sqlx"
 	"github.com/linarium/shortener/internal/models"
 )
 
 type DB interface {
 	Close() error
 	PingContext(ctx context.Context) error
-	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+	sqlx.ExtContext
 	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
-	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
+	QueryRowxContext(ctx context.Context, query string, args ...interface{}) *sqlx.Row
+	NamedExecContext(ctx context.Context, query string, arg interface{}) (sql.Result, error)
 }
 
-func NewDB(cfg string) (DB, error) {
-	return sql.Open("pgx", cfg)
+func NewDB(DatabaseDSName string) (DB, error) {
+	return sqlx.Open("pgx", DatabaseDSName)
 }
 
 type DBStorage struct {
 	db DB
 }
 
-func NewDBStorage(ctx context.Context, driverName, dataSourceName string) (*DBStorage, error) {
+func NewDBStorage(ctx context.Context, dataSourceName string) (*DBStorage, error) {
 	db, err := NewDB(dataSourceName)
 	if err != nil {
 		return nil, err
@@ -74,7 +76,7 @@ func (s *DBStorage) SaveShortURL(ctx context.Context, model models.URL) error {
 
 func (s *DBStorage) GetLongURL(ctx context.Context, short string) (string, bool) {
 	var long string
-	err := s.db.QueryRowContext(ctx, `
+	err := s.db.QueryRowxContext(ctx, `
         SELECT original_url
         FROM urls
         WHERE short_url = $1
@@ -89,9 +91,9 @@ func (s *DBStorage) GetLongURL(ctx context.Context, short string) (string, bool)
 }
 
 func (s *DBStorage) SaveManyURLS(ctx context.Context, models []models.URL) error {
-	_, err := s.db.ExecContext(ctx, `
+	_, err := s.db.NamedExecContext(ctx, `
 		INSERT INTO urls (id, short_url, original_url)
-		VALUES (:id, :short_url, :original_url)
+        VALUES (:id, :short_url, :original_url)
 	`, models)
 	if err != nil {
 		return err

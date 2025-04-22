@@ -15,7 +15,7 @@ import (
 
 func NewStorage(ctx context.Context, cfg config.Config) (Storage, error) {
 	if cfg.DatabaseDSN != "" {
-		return NewDBStorage(ctx, "pgx", cfg.DatabaseDSN)
+		return NewDBStorage(ctx, cfg.DatabaseDSN)
 	}
 
 	if cfg.FileStoragePath != "" {

@@ -1,9 +1,9 @@
 package models
 
 type URL struct {
-	ID          string `json:"id"`
-	ShortURL    string `json:"short_url"`
-	OriginalURL string `json:"original_url"`
+	ID          string `db:"id"`
+	ShortURL    string `db:"short_url"`
+	OriginalURL string `db:"original_url"`
 }
 
 type BatchRequest []BatchRequestItem
