@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
 	"github.com/linarium/shortener/internal/models"
@@ -47,7 +49,8 @@ func initDB(ctx context.Context, db DB) error {
 			short_url text NOT NULL,
 			original_url text NOT NULL,
 			CONSTRAINT urls_pk PRIMARY KEY (id),
-			CONSTRAINT urls_short_url_unique UNIQUE (short_url)
+			CONSTRAINT urls_short_url_unique UNIQUE (short_url),
+			CONSTRAINT urls_original_url_unique UNIQUE (original_url)
 		)
 	`)
 	if err != nil {
@@ -68,6 +71,9 @@ func (s *DBStorage) SaveShortURL(ctx context.Context, model models.URL) error {
         ON CONFLICT (short_url) DO NOTHING
     `, model.ID, model.ShortURL, model.OriginalURL)
 	if err != nil {
+		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == pgerrcode.UniqueViolation {
+			return fmt.Errorf("duplicate_original:%s", model.OriginalURL)
+		}
 		return fmt.Errorf("failed to save URL: %w", err)
 	}
 

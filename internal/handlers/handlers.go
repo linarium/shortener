@@ -67,11 +67,16 @@ func (h *URLHandler) createShortURL(w http.ResponseWriter, r *http.Request) {
 
 	input := string(body)
 	w.Header().Set("Content-Type", defaultContentType)
-	shortURL := h.shortener.Shorten(r.Context(), input)
-	host := h.config.BaseURL
-	resultURL := host + "/" + shortURL
 
-	w.WriteHeader(http.StatusCreated)
+	shortURL := h.shortener.Shorten(r.Context(), input)
+	resultURL := h.config.BaseURL + "/" + shortURL
+
+	w.Header().Set("Content-Type", defaultContentType)
+	if r.Context().Value("duplicate") == true {
+		w.WriteHeader(http.StatusConflict)
+	} else {
+		w.WriteHeader(http.StatusCreated)
+	}
 	w.Write([]byte(resultURL))
 }
 

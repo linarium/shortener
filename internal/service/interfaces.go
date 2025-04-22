@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/linarium/shortener/internal/config"
@@ -61,8 +62,33 @@ func (s *URLShortener) Shorten(ctx context.Context, longURL string) string {
 		ShortURL:    shortKey,
 		OriginalURL: longURL,
 	}
-	s.storage.SaveShortURL(ctx, model)
+
+	err := s.storage.SaveShortURL(ctx, model)
+	if err != nil {
+		if strings.HasPrefix(err.Error(), "duplicate_original:") {
+			if existingShort, ok := s.findShortKeyByOriginalURL(ctx, longURL); ok {
+				return existingShort
+			}
+		}
+	}
+
 	return shortKey
+}
+
+func (s *URLShortener) findShortKeyByOriginalURL(ctx context.Context, original string) (string, bool) {
+	if dbStorage, ok := s.storage.(*DBStorage); ok {
+		var short string
+		err := dbStorage.db.QueryRowxContext(ctx, `
+            SELECT short_url FROM urls WHERE original_url = $1 LIMIT 1
+        `, original).Scan(&short)
+
+		if err != nil {
+			return "", false
+		}
+		return short, true
+	}
+
+	return "", false
 }
 
 func (s *URLShortener) Expand(ctx context.Context, shortKey string) (string, bool) {
