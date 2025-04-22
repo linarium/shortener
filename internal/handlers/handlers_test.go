@@ -93,7 +93,7 @@ func TestGetURL(t *testing.T) {
 	handler := NewURLHandler(cfg, shortener)
 
 	originalURL := "http://example.com"
-	shortURL := handler.shortener.Shorten(context.Background(), originalURL)
+	shortURL, _ := handler.shortener.Shorten(context.Background(), originalURL)
 
 	tests := []struct {
 		name           string
