@@ -33,3 +33,13 @@ func (s *MemoryStorage) GetLongURL(ctx context.Context, short string) (string, b
 func (s *MemoryStorage) Close() error {
 	return nil
 }
+
+func (s *MemoryStorage) SaveManyURLS(ctx context.Context, models []models.URL) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, model := range models {
+		s.data[model.ShortURL] = model.OriginalURL
+	}
+
+	return nil
+}

@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/linarium/shortener/internal/config"
+	"github.com/linarium/shortener/internal/models"
 	"github.com/linarium/shortener/internal/service"
 )
 
@@ -104,4 +105,33 @@ func (h *URLHandler) PingDB(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
+}
+
+func (h *URLHandler) ShortenBatch(w http.ResponseWriter, r *http.Request) {
+	var req models.BatchRequest
+	defer r.Body.Close()
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	if len(req) == 0 {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	resp, err := h.shortener.ShortenBatch(r.Context(), req, h.config.BaseURL+"/")
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	err = json.NewEncoder(w).Encode(resp)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 }
