@@ -35,16 +35,20 @@ func (h *URLHandler) createJSONShortURL(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	shortURL := h.shortener.Shorten(r.Context(), request.URL)
+	shortKey, isDuplicate := h.shortener.Shorten(r.Context(), request.URL)
 
 	response := struct {
 		Result string `json:"result"`
 	}{
-		Result: h.config.BaseURL + "/" + shortURL,
+		Result: h.config.BaseURL + "/" + shortKey,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
+	if isDuplicate {
+		w.WriteHeader(http.StatusConflict)
+	} else {
+		w.WriteHeader(http.StatusCreated)
+	}
 	json.NewEncoder(w).Encode(response)
 }
 
@@ -68,11 +72,11 @@ func (h *URLHandler) createShortURL(w http.ResponseWriter, r *http.Request) {
 	input := string(body)
 	w.Header().Set("Content-Type", defaultContentType)
 
-	shortURL := h.shortener.Shorten(r.Context(), input)
+	shortURL, isDuplicate := h.shortener.Shorten(r.Context(), input)
 	resultURL := h.config.BaseURL + "/" + shortURL
 
 	w.Header().Set("Content-Type", defaultContentType)
-	if r.Context().Value("duplicate") == true {
+	if isDuplicate {
 		w.WriteHeader(http.StatusConflict)
 	} else {
 		w.WriteHeader(http.StatusCreated)

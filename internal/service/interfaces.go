@@ -55,7 +55,7 @@ func (s *URLShortener) generateShortKey() string {
 	return base64.URLEncoding.EncodeToString(b)[:8]
 }
 
-func (s *URLShortener) Shorten(ctx context.Context, longURL string) string {
+func (s *URLShortener) Shorten(ctx context.Context, longURL string) (string, bool) {
 	shortKey := s.generateShortKey()
 	model := models.URL{
 		ID:          uuid.New().String(),
@@ -67,12 +67,12 @@ func (s *URLShortener) Shorten(ctx context.Context, longURL string) string {
 	if err != nil {
 		if strings.HasPrefix(err.Error(), "duplicate_original:") {
 			if existingShort, ok := s.findShortKeyByOriginalURL(ctx, longURL); ok {
-				return existingShort
+				return existingShort, true
 			}
 		}
 	}
 
-	return shortKey
+	return shortKey, false
 }
 
 func (s *URLShortener) findShortKeyByOriginalURL(ctx context.Context, original string) (string, bool) {
