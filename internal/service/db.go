@@ -33,7 +33,7 @@ func (s *DBStorage) Ping(ctx context.Context) error {
 	return s.db.PingContext(ctx)
 }
 
-func (m *MemoryStorage) Ping(ctx context.Context) error {
+func (s *MemoryStorage) Ping(ctx context.Context) error {
 	return nil
 }
 
