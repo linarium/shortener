@@ -29,6 +29,7 @@ type Storage interface {
 	SaveShortURL(ctx context.Context, model models.URL) error
 	SaveManyURLS(ctx context.Context, models []models.URL) error
 	GetLongURL(ctx context.Context, short string) (string, bool)
+	Ping(ctx context.Context) error
 	Close() error
 }
 
@@ -40,6 +41,10 @@ type Shortener interface {
 
 type URLShortener struct {
 	storage Storage
+}
+
+func (s *URLShortener) Ping(ctx context.Context) error {
+	return s.storage.Ping(ctx)
 }
 
 func NewURLShortener(storage Storage) *URLShortener {

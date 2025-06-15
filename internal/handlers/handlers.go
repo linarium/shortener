@@ -102,24 +102,15 @@ func (h *URLHandler) getURL(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *URLHandler) PingDB(w http.ResponseWriter, r *http.Request) {
-	db, err := service.NewDB(h.config.DatabaseDSN)
-	if err != nil {
+	if err := h.shortener.Ping(r.Context()); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	defer db.Close()
-
-	if err := db.PingContext(r.Context()); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
 	w.WriteHeader(http.StatusOK)
 }
 
 func (h *URLHandler) ShortenBatch(w http.ResponseWriter, r *http.Request) {
 	var req models.BatchRequest
-	defer r.Body.Close()
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid JSON format", http.StatusBadRequest)
@@ -133,15 +124,20 @@ func (h *URLHandler) ShortenBatch(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.shortener.ShortenBatch(r.Context(), req, h.config.BaseURL)
 	if err != nil {
-		fmt.Println(err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	respBytes, err := json.Marshal(resp)
+	if err != nil {
+		http.Error(w, "Failed to prepare response", http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 
-	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		fmt.Println(err)
+	if _, err := w.Write(respBytes); err != nil {
+		fmt.Println("Failed to write response:", err)
 	}
 }
