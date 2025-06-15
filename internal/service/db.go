@@ -10,6 +10,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
 	"github.com/linarium/shortener/internal/models"
+	"github.com/pressly/goose/v3"
 )
 
 type DB interface {
@@ -51,11 +52,28 @@ func NewDBStorage(ctx context.Context, dataSourceName string) (*DBStorage, error
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
+	if err := applyMigrations(db); err != nil {
+		return nil, fmt.Errorf("failed to apply migrations: %w", err)
+	}
+
 	return &DBStorage{db: db}, nil
 }
 
 func (s *DBStorage) Close() error {
 	return s.db.Close()
+}
+
+func applyMigrations(db DB) error {
+	sqlDB, ok := db.(*sqlx.DB)
+	if !ok {
+		return fmt.Errorf("expected *sqlx.DB, got %T", db)
+	}
+
+	if err := goose.Up(sqlDB.DB, "migrations"); err != nil {
+		return fmt.Errorf("failed to apply migrations: %w", err)
+	}
+
+	return nil
 }
 
 func (s *DBStorage) SaveShortURL(ctx context.Context, model models.URL) error {
