@@ -15,11 +15,11 @@ import (
 const defaultContentType = "text/plain"
 
 type URLHandler struct {
-	shortener *service.URLShortener
+	shortener service.URLShortener
 	config    config.Config
 }
 
-func NewURLHandler(cfg config.Config, shortener *service.URLShortener) *URLHandler {
+func NewURLHandler(cfg config.Config, shortener service.URLShortener) *URLHandler {
 	return &URLHandler{
 		shortener: shortener,
 		config:    cfg,
