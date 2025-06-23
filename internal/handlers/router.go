@@ -8,7 +8,7 @@ import (
 	"github.com/linarium/shortener/internal/service"
 )
 
-func Router(cfg config.Config, shortener *service.URLShortener) chi.Router {
+func Router(cfg config.Config, shortener service.URLShortener) chi.Router {
 	r := chi.NewRouter()
 
 	handler := NewURLHandler(cfg, shortener)

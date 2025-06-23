@@ -33,25 +33,22 @@ type Storage interface {
 	Close() error
 }
 
-type Shortener interface {
-	Shorten(ctx context.Context, url string) (string, error)
+type URLShortener interface {
+	Shorten(ctx context.Context, url string) (string, bool)
 	ShortenBatch(ctx context.Context, longs models.BatchRequest, baseURL string) (models.BatchResponse, error)
 	Expand(ctx context.Context, shortURL string) (string, bool)
+	Ping(ctx context.Context) error
 }
 
-type URLShortener struct {
+type urlShortener struct {
 	storage Storage
 }
 
-func (s *URLShortener) Ping(ctx context.Context) error {
-	return s.storage.Ping(ctx)
+func NewURLShortener(storage Storage) URLShortener {
+	return &urlShortener{storage: storage}
 }
 
-func NewURLShortener(storage Storage) *URLShortener {
-	return &URLShortener{storage: storage}
-}
-
-func (s *URLShortener) generateShortKey() string {
+func (s *urlShortener) generateShortKey() string {
 	b := make([]byte, 6)
 	_, err := rand.Read(b)
 	if err != nil {
@@ -60,7 +57,7 @@ func (s *URLShortener) generateShortKey() string {
 	return base64.URLEncoding.EncodeToString(b)[:8]
 }
 
-func (s *URLShortener) Shorten(ctx context.Context, longURL string) (string, bool) {
+func (s *urlShortener) Shorten(ctx context.Context, longURL string) (string, bool) {
 	shortKey := s.generateShortKey()
 	model := models.URL{
 		ID:          uuid.New().String(),
@@ -80,7 +77,15 @@ func (s *URLShortener) Shorten(ctx context.Context, longURL string) (string, boo
 	return shortKey, false
 }
 
-func (s *URLShortener) findShortKeyByOriginalURL(ctx context.Context, original string) (string, bool) {
+func (s *urlShortener) Expand(ctx context.Context, shortKey string) (string, bool) {
+	return s.storage.GetLongURL(ctx, shortKey)
+}
+
+func (s *urlShortener) Ping(ctx context.Context) error {
+	return s.storage.Ping(ctx)
+}
+
+func (s *urlShortener) findShortKeyByOriginalURL(ctx context.Context, original string) (string, bool) {
 	if dbStorage, ok := s.storage.(*DBStorage); ok {
 		var short string
 		err := dbStorage.db.QueryRowxContext(ctx, `
@@ -96,11 +101,7 @@ func (s *URLShortener) findShortKeyByOriginalURL(ctx context.Context, original s
 	return "", false
 }
 
-func (s *URLShortener) Expand(ctx context.Context, shortKey string) (string, bool) {
-	return s.storage.GetLongURL(ctx, shortKey)
-}
-
-func (s *URLShortener) ShortenBatch(ctx context.Context, longs models.BatchRequest, baseURL string) (models.BatchResponse, error) {
+func (s *urlShortener) ShortenBatch(ctx context.Context, longs models.BatchRequest, baseURL string) (models.BatchResponse, error) {
 	length := len(longs)
 	shorts := make(models.BatchResponse, length)
 	urls := make([]models.URL, length)
