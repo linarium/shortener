@@ -1,14 +1,14 @@
 package handlers
 
 import (
+	"github.com/linarium/shortener/internal/usecase"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/linarium/shortener/internal/config"
-	"github.com/linarium/shortener/internal/service"
 )
 
-func Router(cfg config.Config, shortener service.URLShortener) chi.Router {
+func Router(cfg config.Config, shortener usecase.Repository) chi.Router {
 	r := chi.NewRouter()
 
 	handler := NewURLHandler(cfg, shortener)

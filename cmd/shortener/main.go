@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/linarium/shortener/internal/usecase"
 	"net/http"
 
 	"github.com/linarium/shortener/internal/logger"
@@ -26,8 +27,7 @@ func main() {
 	}
 	defer storage.Close()
 
-	shortener := service.NewURLShortener(storage)
-
+	shortener := usecase.NewShortenerService(storage)
 	r := handlers.Router(cfg, shortener)
 	if err := http.ListenAndServe(cfg.ServerAddress, r); err != nil {
 		logger.Sugar.Fatalf("Сбой в работе сервера: %v", err)

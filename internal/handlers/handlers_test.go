@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"github.com/linarium/shortener/internal/usecase"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -19,7 +20,7 @@ func TestCreateShortURL(t *testing.T) {
 		BaseURL:       "http://localhost:8080",
 	}
 	storage, _ := service.NewMemoryStorage(context.Background())
-	shortener := service.NewURLShortener(storage)
+	shortener := usecase.NewShortenerService(storage)
 
 	handler := NewURLHandler(cfg, shortener)
 
@@ -88,7 +89,7 @@ func TestGetURL(t *testing.T) {
 		BaseURL:       "http://localhost:8080",
 	}
 	storage, _ := service.NewMemoryStorage(context.Background())
-	shortener := service.NewURLShortener(storage)
+	shortener := usecase.NewShortenerService(storage)
 
 	handler := NewURLHandler(cfg, shortener)
 

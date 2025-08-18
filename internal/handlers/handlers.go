@@ -3,23 +3,23 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/linarium/shortener/internal/usecase"
 	"io"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/linarium/shortener/internal/config"
 	"github.com/linarium/shortener/internal/models"
-	"github.com/linarium/shortener/internal/service"
 )
 
 const defaultContentType = "text/plain"
 
 type URLHandler struct {
-	shortener service.URLShortener
+	shortener usecase.Repository
 	config    config.Config
 }
 
-func NewURLHandler(cfg config.Config, shortener service.URLShortener) *URLHandler {
+func NewURLHandler(cfg config.Config, shortener usecase.Repository) *URLHandler {
 	return &URLHandler{
 		shortener: shortener,
 		config:    cfg,
