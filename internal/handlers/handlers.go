@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/linarium/shortener/internal/handlers/middleware"
 	"github.com/linarium/shortener/internal/logger"
 	"github.com/linarium/shortener/internal/usecase"
@@ -170,19 +169,21 @@ func (h *URLHandler) PingDB(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *URLHandler) ShortenBatch(w http.ResponseWriter, r *http.Request) {
+	logger.Sugar.Info("ShortenBatch called")
 	userID, ok := r.Context().Value(middleware.UserIDContextKey).(string)
 	if !ok {
 		logger.Sugar.Error("user ID not found in context")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	logger.Sugar.Infof("User ID: %s", userID)
 
 	var req models.BatchRequest
-
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid JSON format", http.StatusBadRequest)
 		return
 	}
+	logger.Sugar.Infof("Received %d URLs to shorten", len(req))
 
 	if len(req) == 0 {
 		http.Error(w, "Empty batch request", http.StatusBadRequest)
@@ -191,20 +192,17 @@ func (h *URLHandler) ShortenBatch(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.shortener.ShortenBatch(r.Context(), req, h.config.BaseURL, userID)
 	if err != nil {
+		logger.Sugar.Errorf("Error in ShortenBatch: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	respBytes, err := json.Marshal(resp)
-	if err != nil {
-		http.Error(w, "Failed to prepare response", http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 
-	if _, err := w.Write(respBytes); err != nil {
-		fmt.Println("Failed to write response:", err)
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		logger.Sugar.Errorf("Error encoding response: %v", err)
+		http.Error(w, "Failed to prepare response", http.StatusInternalServerError)
+		return
 	}
 }
