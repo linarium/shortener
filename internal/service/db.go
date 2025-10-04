@@ -20,6 +20,7 @@ type DB interface {
 	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
 	QueryRowxContext(ctx context.Context, query string, args ...interface{}) *sqlx.Row
 	NamedExecContext(ctx context.Context, query string, arg interface{}) (sql.Result, error)
+	SelectContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error
 }
 
 func NewDB(DatabaseDSName string) (DB, error) {
@@ -27,9 +28,7 @@ func NewDB(DatabaseDSName string) (DB, error) {
 }
 
 type DBStorage struct {
-	db           DB
-	getAllStmt   *sqlx.Stmt
-	cookieSecret []byte
+	db DB
 }
 
 func (s *DBStorage) Ping(ctx context.Context) error {
@@ -122,23 +121,18 @@ func (s *DBStorage) SaveManyURLS(ctx context.Context, models []models.URL) error
 }
 
 func (s *DBStorage) GetAll(ctx context.Context, userID string) ([]models.URL, error) {
-	var allUrls []models.URL
-	chunkSize := 1000
-	offset := 0
+	var urls []models.URL
 
-	for {
-		var urls []models.URL
-		if err := s.getAllStmt.SelectContext(ctx, &urls, userID, chunkSize, offset); err != nil {
-			return nil, err
-		}
+	query := `
+		SELECT short_url, original_url 
+		FROM urls 
+		WHERE user_id = $1 AND deleted_at IS NULL
+	`
 
-		if len(urls) == 0 {
-			break
-		}
-
-		allUrls = append(allUrls, urls...)
-		offset += chunkSize
+	err := s.db.SelectContext(ctx, &urls, query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user URLs: %w", err)
 	}
 
-	return allUrls, nil
+	return urls, nil
 }
