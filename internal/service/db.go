@@ -20,6 +20,7 @@ type DB interface {
 	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
 	QueryRowxContext(ctx context.Context, query string, args ...interface{}) *sqlx.Row
 	NamedExecContext(ctx context.Context, query string, arg interface{}) (sql.Result, error)
+	SelectContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error
 }
 
 func NewDB(DatabaseDSName string) (DB, error) {
@@ -78,9 +79,9 @@ func applyMigrations(db DB) error {
 
 func (s *DBStorage) SaveShortURL(ctx context.Context, model models.URL) error {
 	_, err := s.db.ExecContext(ctx, `
-        INSERT INTO urls (id, short_url, original_url)
-        VALUES ($1, $2, $3)
-    `, model.ID, model.ShortURL, model.OriginalURL)
+        INSERT INTO urls (id, user_id, short_url, original_url)
+        VALUES ($1, $2, $3, $4)
+    `, model.ID, model.UserID, model.ShortURL, model.OriginalURL)
 	if err != nil {
 		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == pgerrcode.UniqueViolation {
 			return fmt.Errorf("duplicate_original:%s", model.OriginalURL)
@@ -107,13 +108,31 @@ func (s *DBStorage) GetLongURL(ctx context.Context, short string) (string, bool)
 }
 
 func (s *DBStorage) SaveManyURLS(ctx context.Context, models []models.URL) error {
-	_, err := s.db.NamedExecContext(ctx, `
-		INSERT INTO urls (id, short_url, original_url)
-        VALUES (:id, :short_url, :original_url)
-	`, models)
+	query := `
+        INSERT INTO urls (id, user_id, short_url, original_url)
+        VALUES (:id, :user_id, :short_url, :original_url)
+    `
+	_, err := s.db.NamedExecContext(ctx, query, models)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to save batch URLs: %w", err)
 	}
 
 	return nil
+}
+
+func (s *DBStorage) GetAll(ctx context.Context, userID string) ([]models.URL, error) {
+	var urls []models.URL
+
+	query := `
+		SELECT short_url, original_url 
+		FROM urls 
+		WHERE user_id = $1 AND deleted_at IS NULL
+	`
+
+	err := s.db.SelectContext(ctx, &urls, query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user URLs: %w", err)
+	}
+
+	return urls, nil
 }

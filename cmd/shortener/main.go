@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"github.com/linarium/shortener/internal/usecase"
+	"log"
 	"net/http"
 
 	"github.com/linarium/shortener/internal/logger"
@@ -15,11 +16,11 @@ import (
 func main() {
 	cfg, err := config.InitConfig()
 	if err != nil {
-		logger.Sugar.Fatalf("Ошибка инициализации конфигурации: %v\n", err)
+		log.Fatalf("Ошибка инициализации конфигурации: %v\n", err)
 	}
 
 	logger.Initialize()
-	defer logger.Sugar.Sync()
+	defer logger.Sync()
 
 	storage, err := service.NewStorage(context.Background(), cfg)
 	if err != nil {
@@ -29,6 +30,9 @@ func main() {
 
 	shortener := usecase.NewShortenerService(storage)
 	r := handlers.Router(cfg, shortener)
+
+	logger.Sugar.Infof("Server starting on %s", cfg.ServerAddress)
+
 	if err := http.ListenAndServe(cfg.ServerAddress, r); err != nil {
 		logger.Sugar.Fatalf("Сбой в работе сервера: %v", err)
 	}
