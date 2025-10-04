@@ -81,7 +81,7 @@ func applyMigrations(db DB) error {
 func (s *DBStorage) SaveShortURL(ctx context.Context, model models.URL) error {
 	_, err := s.db.ExecContext(ctx, `
         INSERT INTO urls (id, user_id, short_url, original_url)
-        VALUES ($1, $2::uuid, $3, $4)
+        VALUES ($1, $2, $3, $4)
     `, model.ID, model.UserID, model.ShortURL, model.OriginalURL)
 	if err != nil {
 		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == pgerrcode.UniqueViolation {
@@ -109,12 +109,13 @@ func (s *DBStorage) GetLongURL(ctx context.Context, short string) (string, bool)
 }
 
 func (s *DBStorage) SaveManyURLS(ctx context.Context, models []models.URL) error {
-	_, err := s.db.NamedExecContext(ctx, `
-		INSERT INTO urls (id, short_url, original_url)
-        VALUES (:id, :short_url, :original_url)
-	`, models)
+	query := `
+        INSERT INTO urls (id, user_id, short_url, original_url)
+        VALUES (:id, :user_id, :short_url, :original_url)
+    `
+	_, err := s.db.NamedExecContext(ctx, query, models)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to save batch URLs: %w", err)
 	}
 
 	return nil
