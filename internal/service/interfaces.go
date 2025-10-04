@@ -26,6 +26,7 @@ type Storage interface {
 	FindShortURLByOriginal(ctx context.Context, original string) (string, bool)
 	Ping(ctx context.Context) error
 	Close() error
+	DeleteURLs(ctx context.Context, userID string, shortURLs []string) error
 }
 
 func (s *DBStorage) FindShortURLByOriginal(ctx context.Context, original string) (string, bool) {

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/linarium/shortener/internal/handlers/middleware"
 	"github.com/linarium/shortener/internal/logger"
@@ -205,4 +206,43 @@ func (h *URLHandler) ShortenBatch(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to prepare response", http.StatusInternalServerError)
 		return
 	}
+}
+
+func (h *URLHandler) DeleteURLs(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	userID, ok := r.Context().Value(middleware.UserIDContextKey).(string)
+	if !ok || userID == "" {
+		logger.Sugar.Warn("Unauthorized access to delete URLs")
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	var shortURLs []string
+	if err := json.NewDecoder(r.Body).Decode(&shortURLs); err != nil {
+		logger.Sugar.Errorf("Error decoding delete request: %v", err)
+		http.Error(w, "Invalid JSON format", http.StatusBadRequest)
+		return
+	}
+
+	if len(shortURLs) == 0 {
+		logger.Sugar.Warn("Empty delete request")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	logger.Sugar.Infof("User %s requested deletion of %d URLs", userID, len(shortURLs))
+
+	go func() {
+		if err := h.shortener.DeleteURLs(context.Background(), userID, shortURLs); err != nil {
+			logger.Sugar.Errorf("Error deleting URLs: %v", err)
+		} else {
+			logger.Sugar.Infof("Successfully processed deletion of %d URLs for user %s", len(shortURLs), userID)
+		}
+	}()
+
+	w.WriteHeader(http.StatusAccepted)
 }

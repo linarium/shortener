@@ -18,6 +18,7 @@ type Repository interface {
 	Expand(ctx context.Context, shortURL string) (string, bool)
 	Ping(ctx context.Context) error
 	GetUserURLs(ctx context.Context, userID string) ([]models.URL, error)
+	DeleteURLs(ctx context.Context, userID string, shortURLs []string) error
 }
 
 type ShortenerService struct {
@@ -112,4 +113,16 @@ func (s *ShortenerService) GetUserURLs(ctx context.Context, userID string) ([]mo
 		return nil, fmt.Errorf("userID is required")
 	}
 	return s.storage.GetAll(ctx, userID)
+}
+
+func (s *ShortenerService) DeleteURLs(ctx context.Context, userID string, shortURLs []string) error {
+	if userID == "" {
+		return fmt.Errorf("userID is required")
+	}
+
+	if len(shortURLs) == 0 {
+		return nil
+	}
+
+	return s.storage.DeleteURLs(ctx, userID, shortURLs)
 }

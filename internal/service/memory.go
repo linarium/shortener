@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/linarium/shortener/internal/models"
@@ -27,7 +28,11 @@ func (s *MemoryStorage) GetLongURL(ctx context.Context, short string) (string, b
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	long, exists := s.data[short]
-	return long, exists
+	if !exists {
+		return "", false
+	}
+
+	return long, true
 }
 
 func (s *MemoryStorage) Close() error {
@@ -56,4 +61,16 @@ func (s *MemoryStorage) GetAll(ctx context.Context, userID string) ([]models.URL
 	}
 
 	return urls, nil
+}
+
+func (s *MemoryStorage) DeleteURLs(ctx context.Context, userID string, shortURLs []string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for _, shortURL := range shortURLs {
+		delete(s.data, shortURL)
+	}
+
+	fmt.Printf("Deleted %d URLs for user %s\n", len(shortURLs), userID)
+	return nil
 }

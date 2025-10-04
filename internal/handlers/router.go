@@ -25,6 +25,7 @@ func Router(cfg config.Config, shortener usecase.Repository) chi.Router {
 		r.Post("/api/shorten", middleware.Compressor(handler.createJSONShortURL))
 		r.Post("/api/shorten/batch", handler.ShortenBatch)
 		r.Get("/api/user/urls", handler.GetURLs)
+		r.Delete("/api/user/urls", handler.DeleteURLs)
 	})
 
 	r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {

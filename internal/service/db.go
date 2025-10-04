@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -94,13 +95,15 @@ func (s *DBStorage) SaveShortURL(ctx context.Context, model models.URL) error {
 
 func (s *DBStorage) GetLongURL(ctx context.Context, short string) (string, bool) {
 	var long string
+	var isDeleted bool
+
 	err := s.db.QueryRowxContext(ctx, `
-        SELECT original_url
+        SELECT original_url, is_deleted
         FROM urls
         WHERE short_url = $1
-    `, short).Scan(&long)
+    `, short).Scan(&long, &isDeleted)
 
-	if err != nil {
+	if err != nil || isDeleted {
 		return "", false
 	}
 
@@ -135,4 +138,36 @@ func (s *DBStorage) GetAll(ctx context.Context, userID string) ([]models.URL, er
 	}
 
 	return urls, nil
+}
+
+func (s *DBStorage) DeleteURLs(ctx context.Context, userID string, shortURLs []string) error {
+	if len(shortURLs) == 0 {
+		return nil
+	}
+
+	placeholders := make([]string, len(shortURLs))
+	args := make([]interface{}, len(shortURLs)+1)
+	args[0] = userID
+
+	for i, shortURL := range shortURLs {
+		placeholders[i] = fmt.Sprintf("$%d", i+2)
+		args[i+1] = shortURL
+	}
+
+	query := fmt.Sprintf(`
+        UPDATE urls 
+        SET is_deleted = TRUE 
+        WHERE user_id = $1 
+        AND short_url IN (%s)
+    `, strings.Join(placeholders, ", "))
+
+	result, err := s.db.ExecContext(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("failed to delete URLs: %w", err)
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	fmt.Printf("Soft deleted %d URLs for user %s\n", rowsAffected, userID)
+
+	return nil
 }

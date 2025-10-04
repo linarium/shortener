@@ -78,3 +78,7 @@ func (s *FileStorage) SaveManyURLS(ctx context.Context, models []models.URL) err
 func (s *FileStorage) GetAll(ctx context.Context, userID string) ([]models.URL, error) {
 	return s.memory.GetAll(ctx, userID)
 }
+
+func (s *FileStorage) DeleteURLs(ctx context.Context, userID string, shortURLs []string) error {
+	return s.memory.DeleteURLs(ctx, userID, shortURLs)
+}
