@@ -110,7 +110,7 @@ func (h *URLHandler) getURL(w http.ResponseWriter, r *http.Request) {
 	url, exists, isDeleted := h.shortener.Expand(r.Context(), id)
 
 	if !exists {
-		http.Error(w, "URL not found", http.StatusNotFound)
+		http.Error(w, "URL not found", http.StatusBadRequest)
 		return
 	}
 
