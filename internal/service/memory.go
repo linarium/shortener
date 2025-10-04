@@ -40,6 +40,20 @@ func (s *MemoryStorage) SaveManyURLS(ctx context.Context, models []models.URL) e
 	for _, model := range models {
 		s.data[model.ShortURL] = model.OriginalURL
 	}
-
 	return nil
+}
+
+func (s *MemoryStorage) GetAll(ctx context.Context, userID string) ([]models.URL, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	var urls []models.URL
+	for shortURL, originalURL := range s.data {
+		urls = append(urls, models.URL{
+			ShortURL:    shortURL,
+			OriginalURL: originalURL,
+		})
+	}
+
+	return urls, nil
 }
