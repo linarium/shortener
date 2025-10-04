@@ -3,6 +3,7 @@ CREATE TABLE urls (
     id uuid PRIMARY KEY,
     short_url text NOT NULL UNIQUE,
     original_url text NOT NULL UNIQUE,
+    user_id uuid NOT NULL,
     created_at timestamptz NOT NULL DEFAULT now(),
     deleted_at timestamptz
 );

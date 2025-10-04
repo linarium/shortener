@@ -13,10 +13,11 @@ import (
 )
 
 type Repository interface {
-	Shorten(ctx context.Context, url string) (string, bool)
-	ShortenBatch(ctx context.Context, longs models.BatchRequest, baseURL string) (models.BatchResponse, error)
+	Shorten(ctx context.Context, url string, userID string) (string, bool)
+	ShortenBatch(ctx context.Context, longs models.BatchRequest, baseURL string, userID string) (models.BatchResponse, error)
 	Expand(ctx context.Context, shortURL string) (string, bool)
 	Ping(ctx context.Context) error
+	GetUserURLs(ctx context.Context, userID string) ([]models.URL, error)
 }
 
 type ShortenerService struct {
@@ -36,12 +37,13 @@ func (s *ShortenerService) generateShortKey() string {
 	return base64.URLEncoding.EncodeToString(b)[:8]
 }
 
-func (s *ShortenerService) Shorten(ctx context.Context, longURL string) (string, bool) {
+func (s *ShortenerService) Shorten(ctx context.Context, longURL string, userID string) (string, bool) {
 	shortKey := s.generateShortKey()
 	model := models.URL{
 		ID:          uuid.New().String(),
 		ShortURL:    shortKey,
 		OriginalURL: longURL,
+		UserID:      userID,
 	}
 
 	err := s.storage.SaveShortURL(ctx, model)
@@ -68,7 +70,7 @@ func (s *ShortenerService) findShortKeyByOriginalURL(ctx context.Context, origin
 	return s.storage.FindShortURLByOriginal(ctx, original)
 }
 
-func (s *ShortenerService) ShortenBatch(ctx context.Context, longs models.BatchRequest, baseURL string) (models.BatchResponse, error) {
+func (s *ShortenerService) ShortenBatch(ctx context.Context, longs models.BatchRequest, baseURL string, userID string) (models.BatchResponse, error) {
 	length := len(longs)
 	shorts := make(models.BatchResponse, length)
 	urls := make([]models.URL, length)
@@ -79,6 +81,7 @@ func (s *ShortenerService) ShortenBatch(ctx context.Context, longs models.BatchR
 			ID:          uuid.New().String(),
 			ShortURL:    shortKey,
 			OriginalURL: long.OriginalURL,
+			UserID:      userID,
 		}
 		shorts[i] = models.BatchResponseItem{
 			CorrelationID: long.CorrelationID,
@@ -102,4 +105,11 @@ func (s *ShortenerService) ShortenBatch(ctx context.Context, longs models.BatchR
 	}
 
 	return shorts, nil
+}
+
+func (s *ShortenerService) GetUserURLs(ctx context.Context, userID string) ([]models.URL, error) {
+	if userID == "" {
+		return nil, fmt.Errorf("userID is required")
+	}
+	return s.storage.GetAll(ctx, userID)
 }

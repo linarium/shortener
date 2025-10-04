@@ -27,7 +27,9 @@ func NewDB(DatabaseDSName string) (DB, error) {
 }
 
 type DBStorage struct {
-	db DB
+	db           DB
+	getAllStmt   *sqlx.Stmt
+	cookieSecret []byte
 }
 
 func (s *DBStorage) Ping(ctx context.Context) error {
@@ -78,9 +80,9 @@ func applyMigrations(db DB) error {
 
 func (s *DBStorage) SaveShortURL(ctx context.Context, model models.URL) error {
 	_, err := s.db.ExecContext(ctx, `
-        INSERT INTO urls (id, short_url, original_url)
-        VALUES ($1, $2, $3)
-    `, model.ID, model.ShortURL, model.OriginalURL)
+        INSERT INTO urls (id, user_id, short_url, original_url)
+        VALUES ($1, $2::uuid, $3, $4)
+    `, model.ID, model.UserID, model.ShortURL, model.OriginalURL)
 	if err != nil {
 		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == pgerrcode.UniqueViolation {
 			return fmt.Errorf("duplicate_original:%s", model.OriginalURL)
@@ -116,4 +118,26 @@ func (s *DBStorage) SaveManyURLS(ctx context.Context, models []models.URL) error
 	}
 
 	return nil
+}
+
+func (s *DBStorage) GetAll(ctx context.Context, userID string) ([]models.URL, error) {
+	var allUrls []models.URL
+	chunkSize := 1000
+	offset := 0
+
+	for {
+		var urls []models.URL
+		if err := s.getAllStmt.SelectContext(ctx, &urls, userID, chunkSize, offset); err != nil {
+			return nil, err
+		}
+
+		if len(urls) == 0 {
+			break
+		}
+
+		allUrls = append(allUrls, urls...)
+		offset += chunkSize
+	}
+
+	return allUrls, nil
 }
