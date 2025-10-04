@@ -1,47 +1,50 @@
 package service
 
 import (
-	"crypto/rand"
-	"encoding/base64"
-	"github.com/linarium/shortener/internal/logger"
+	"context"
+	"github.com/linarium/shortener/internal/config"
 	"github.com/linarium/shortener/internal/models"
 )
 
+func NewStorage(ctx context.Context, cfg config.Config) (Storage, error) {
+	if cfg.DatabaseDSN != "" {
+		return NewDBStorage(ctx, cfg.DatabaseDSN)
+	}
+
+	if cfg.FileStoragePath != "" {
+		return NewFileStorage(cfg.FileStoragePath)
+	}
+
+	return NewMemoryStorage(ctx)
+}
+
 type Storage interface {
-	SaveShortURL(model models.URL) error
-	GetLongURL(short string) (string, bool)
+	SaveShortURL(ctx context.Context, model models.URL) error
+	SaveManyURLS(ctx context.Context, models []models.URL) error
+	GetLongURL(ctx context.Context, short string) (string, bool)
+	FindShortURLByOriginal(ctx context.Context, original string) (string, bool)
+	Ping(ctx context.Context) error
 	Close() error
 }
 
-type Shortener interface {
-	Shorten(url string) (string, error)
-	Expand(shortURL string) (string, bool)
-}
-
-type URLShortener struct {
-	storage Storage
-}
-
-func NewURLShortener(storage Storage) *URLShortener {
-	return &URLShortener{storage: storage}
-}
-
-func (s *URLShortener) generateShortKey() string {
-	b := make([]byte, 6)
-	_, err := rand.Read(b)
+func (s *DBStorage) FindShortURLByOriginal(ctx context.Context, original string) (string, bool) {
+	var short string
+	err := s.db.QueryRowxContext(ctx, `SELECT short_url FROM urls WHERE original_url = $1 LIMIT 1`, original).Scan(&short)
 	if err != nil {
-		logger.Sugar.Fatalf("Ошибка при генерации сокращённого URL: %v", err)
+		return "", false
 	}
-	return base64.URLEncoding.EncodeToString(b)[:8]
+	return short, true
 }
 
-func (s *URLShortener) Shorten(longURL string) string {
-	shortKey := s.generateShortKey()
-	model := models.URL{ShortURL: shortKey, OriginalURL: longURL}
-	s.storage.SaveShortURL(model)
-	return shortKey
+func (s *MemoryStorage) FindShortURLByOriginal(ctx context.Context, original string) (string, bool) {
+	for k, v := range s.data {
+		if v == original {
+			return k, true
+		}
+	}
+	return "", false
 }
 
-func (s *URLShortener) Expand(shortKey string) (string, bool) {
-	return s.storage.GetLongURL(shortKey)
+func (s *FileStorage) FindShortURLByOriginal(ctx context.Context, original string) (string, bool) {
+	return s.memory.FindShortURLByOriginal(ctx, original)
 }

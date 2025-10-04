@@ -2,9 +2,11 @@ package service
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
-	"github.com/linarium/shortener/internal/models"
 	"os"
+
+	"github.com/linarium/shortener/internal/models"
 )
 
 type FileStorage struct {
@@ -40,11 +42,11 @@ func NewFileStorage(filePath string) (*FileStorage, error) {
 	}, nil
 }
 
-func (s *FileStorage) GetLongURL(short string) (string, bool) {
-	return s.memory.GetLongURL(short)
+func (s *FileStorage) GetLongURL(ctx context.Context, short string) (string, bool) {
+	return s.memory.GetLongURL(ctx, short)
 }
 
-func (s *FileStorage) SaveShortURL(model models.URL) error {
+func (s *FileStorage) SaveShortURL(ctx context.Context, model models.URL) error {
 	if err := json.NewEncoder(s.writer).Encode(model); err != nil {
 		return err
 	}
@@ -52,9 +54,23 @@ func (s *FileStorage) SaveShortURL(model models.URL) error {
 		return err
 	}
 
-	return s.memory.SaveShortURL(model)
+	return s.memory.SaveShortURL(ctx, model)
 }
 
 func (s *FileStorage) Close() error {
 	return s.file.Close()
+}
+
+func (s *FileStorage) SaveManyURLS(ctx context.Context, models []models.URL) error {
+	for _, model := range models {
+		if err := json.NewEncoder(s.writer).Encode(model); err != nil {
+			return err
+		}
+	}
+
+	if err := s.writer.Flush(); err != nil {
+		return err
+	}
+
+	return s.memory.SaveManyURLS(ctx, models)
 }
