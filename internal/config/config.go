@@ -13,6 +13,7 @@ type Config struct {
 	BaseURL         string
 	FileStoragePath string
 	DatabaseDSN     string
+	SecretKey       string
 }
 
 func InitConfig() (Config, error) {

@@ -2,8 +2,10 @@ package models
 
 type URL struct {
 	ID          string `db:"id"`
+	UserID      string `db:"user_id"`
 	ShortURL    string `db:"short_url"`
 	OriginalURL string `db:"original_url"`
+	IsDeleted   bool   `json:"is_deleted" db:"is_deleted"`
 }
 
 type BatchRequest []BatchRequestItem

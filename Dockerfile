@@ -1,5 +1,5 @@
 # Стадия сборки
-FROM golang:1.23.8-alpine3.20 AS builder
+FROM golang:1.24.0-alpine3.20 AS builder
 
 WORKDIR /app
 COPY . .
