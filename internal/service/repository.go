@@ -42,7 +42,7 @@ func NewFileStorage(filePath string) (*FileStorage, error) {
 	}, nil
 }
 
-func (s *FileStorage) GetLongURL(ctx context.Context, short string) (string, bool) {
+func (s *FileStorage) GetLongURL(ctx context.Context, short string) (string, bool, bool) {
 	return s.memory.GetLongURL(ctx, short)
 }
 

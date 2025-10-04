@@ -107,10 +107,15 @@ func (h *URLHandler) getURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	url, exists := h.shortener.Expand(r.Context(), id)
+	url, exists, isDeleted := h.shortener.Expand(r.Context(), id)
 
 	if !exists {
-		http.Error(w, "URL not found", http.StatusBadRequest)
+		http.Error(w, "URL not found", http.StatusNotFound)
+		return
+	}
+
+	if isDeleted {
+		http.Error(w, "URL has been deleted", http.StatusGone)
 		return
 	}
 

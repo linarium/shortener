@@ -24,15 +24,16 @@ func (s *MemoryStorage) SaveShortURL(ctx context.Context, model models.URL) erro
 	return nil
 }
 
-func (s *MemoryStorage) GetLongURL(ctx context.Context, short string) (string, bool) {
+func (s *MemoryStorage) GetLongURL(ctx context.Context, short string) (string, bool, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
+
 	long, exists := s.data[short]
 	if !exists {
-		return "", false
+		return "", false, false
 	}
 
-	return long, true
+	return long, true, false
 }
 
 func (s *MemoryStorage) Close() error {

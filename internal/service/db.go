@@ -93,7 +93,7 @@ func (s *DBStorage) SaveShortURL(ctx context.Context, model models.URL) error {
 	return nil
 }
 
-func (s *DBStorage) GetLongURL(ctx context.Context, short string) (string, bool) {
+func (s *DBStorage) GetLongURL(ctx context.Context, short string) (string, bool, bool) {
 	var long string
 	var isDeleted bool
 
@@ -103,11 +103,15 @@ func (s *DBStorage) GetLongURL(ctx context.Context, short string) (string, bool)
         WHERE short_url = $1
     `, short).Scan(&long, &isDeleted)
 
-	if err != nil || isDeleted {
-		return "", false
+	if err != nil {
+		return "", false, false
 	}
 
-	return long, true
+	if isDeleted {
+		return "", true, true
+	}
+
+	return long, true, false
 }
 
 func (s *DBStorage) SaveManyURLS(ctx context.Context, models []models.URL) error {
@@ -170,4 +174,22 @@ func (s *DBStorage) DeleteURLs(ctx context.Context, userID string, shortURLs []s
 	fmt.Printf("Soft deleted %d URLs for user %s\n", rowsAffected, userID)
 
 	return nil
+}
+
+func (s *DBStorage) GetURLInfo(ctx context.Context, short string) (*models.URL, bool, error) {
+	var url models.URL
+	err := s.db.QueryRowxContext(ctx, `
+		SELECT short_url, original_url, is_deleted
+		FROM urls
+		WHERE short_url = $1
+	`, short).Scan(&url.ShortURL, &url.OriginalURL, &url.IsDeleted)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, false, nil
+		}
+		return nil, false, fmt.Errorf("failed to get URL info: %w", err)
+	}
+
+	return &url, true, nil
 }

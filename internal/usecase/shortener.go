@@ -15,7 +15,7 @@ import (
 type Repository interface {
 	Shorten(ctx context.Context, url string, userID string) (string, bool)
 	ShortenBatch(ctx context.Context, longs models.BatchRequest, baseURL string, userID string) (models.BatchResponse, error)
-	Expand(ctx context.Context, shortURL string) (string, bool)
+	Expand(ctx context.Context, shortURL string) (string, bool, bool)
 	Ping(ctx context.Context) error
 	GetUserURLs(ctx context.Context, userID string) ([]models.URL, error)
 	DeleteURLs(ctx context.Context, userID string, shortURLs []string) error
@@ -59,8 +59,8 @@ func (s *ShortenerService) Shorten(ctx context.Context, longURL string, userID s
 	return shortKey, false
 }
 
-func (s *ShortenerService) Expand(ctx context.Context, shortKey string) (string, bool) {
-	return s.storage.GetLongURL(ctx, shortKey)
+func (s *ShortenerService) Expand(ctx context.Context, shortURL string) (string, bool, bool) {
+	return s.storage.GetLongURL(ctx, shortURL)
 }
 
 func (s *ShortenerService) Ping(ctx context.Context) error {

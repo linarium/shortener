@@ -22,7 +22,7 @@ type Storage interface {
 	SaveShortURL(ctx context.Context, model models.URL) error
 	SaveManyURLS(ctx context.Context, models []models.URL) error
 	GetAll(ctx context.Context, userID string) ([]models.URL, error)
-	GetLongURL(ctx context.Context, short string) (string, bool)
+	GetLongURL(ctx context.Context, short string) (string, bool, bool)
 	FindShortURLByOriginal(ctx context.Context, original string) (string, bool)
 	Ping(ctx context.Context) error
 	Close() error
