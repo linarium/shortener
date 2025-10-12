@@ -23,11 +23,16 @@ func (s *MemoryStorage) SaveShortURL(ctx context.Context, model models.URL) erro
 	return nil
 }
 
-func (s *MemoryStorage) GetLongURL(ctx context.Context, short string) (string, bool) {
+func (s *MemoryStorage) GetLongURL(ctx context.Context, short string) (string, bool, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
+
 	long, exists := s.data[short]
-	return long, exists
+	if !exists {
+		return "", false, false
+	}
+
+	return long, true, false
 }
 
 func (s *MemoryStorage) Close() error {
@@ -39,6 +44,31 @@ func (s *MemoryStorage) SaveManyURLS(ctx context.Context, models []models.URL) e
 	defer s.mu.Unlock()
 	for _, model := range models {
 		s.data[model.ShortURL] = model.OriginalURL
+	}
+	return nil
+}
+
+func (s *MemoryStorage) GetAll(ctx context.Context, userID string) ([]models.URL, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	var urls []models.URL
+	for shortURL, originalURL := range s.data {
+		urls = append(urls, models.URL{
+			ShortURL:    shortURL,
+			OriginalURL: originalURL,
+		})
+	}
+
+	return urls, nil
+}
+
+func (s *MemoryStorage) DeleteURLs(ctx context.Context, userID string, shortURLs []string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for _, shortURL := range shortURLs {
+		delete(s.data, shortURL)
 	}
 
 	return nil
