@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/linarium/shortener/internal/models"
@@ -72,6 +71,5 @@ func (s *MemoryStorage) DeleteURLs(ctx context.Context, userID string, shortURLs
 		delete(s.data, shortURL)
 	}
 
-	fmt.Printf("Deleted %d URLs for user %s\n", len(shortURLs), userID)
 	return nil
 }

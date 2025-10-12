@@ -1,10 +1,10 @@
 -- +goose Up
 CREATE TABLE urls (
     id uuid PRIMARY KEY,
-    short_url text NOT NULL UNIQUE,
-    original_url text NOT NULL UNIQUE,
+    short_url varchar(100) NOT NULL UNIQUE,
+    original_url varchar(2048) NOT NULL UNIQUE,
     user_id uuid NOT NULL,
-    correlation_id text,
+    correlation_id varchar(100),
     created_at timestamptz NOT NULL DEFAULT now(),
     deleted_at timestamptz,
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE

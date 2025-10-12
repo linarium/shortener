@@ -3,11 +3,13 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/linarium/shortener/internal/handlers/middleware"
 	"github.com/linarium/shortener/internal/logger"
 	"github.com/linarium/shortener/internal/usecase"
 	"io"
 	"net/http"
+	"net/url"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/linarium/shortener/internal/config"
@@ -22,14 +24,36 @@ type URLHandler struct {
 }
 
 func NewURLHandler(cfg config.Config, shortener usecase.Repository) *URLHandler {
+	if shortener == nil {
+		panic("shortener cannot be nil")
+	}
 	return &URLHandler{
 		shortener: shortener,
 		config:    cfg,
 	}
 }
 
+func (h *URLHandler) getUserID(ctx context.Context) (string, bool) {
+	userID, ok := ctx.Value(middleware.UserIDContextKey).(string)
+	if !ok || userID == "" {
+		return "", false
+	}
+	return userID, true
+}
+
+func (h *URLHandler) buildShortURL(shortKey string) (string, error) {
+	if h.config.BaseURL == "" {
+		return "", fmt.Errorf("base URL is not configured")
+	}
+	fullURL, err := url.JoinPath(h.config.BaseURL, shortKey)
+	if err != nil {
+		return "", fmt.Errorf("failed to build short URL: %w", err)
+	}
+	return fullURL, nil
+}
+
 func (h *URLHandler) createJSONShortURL(w http.ResponseWriter, r *http.Request) {
-	userID, ok := r.Context().Value(middleware.UserIDContextKey).(string)
+	userID, ok := h.getUserID(r.Context())
 	if !ok {
 		logger.Sugar.Error("user ID not found in context")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -46,10 +70,17 @@ func (h *URLHandler) createJSONShortURL(w http.ResponseWriter, r *http.Request) 
 
 	shortKey, isDuplicate := h.shortener.Shorten(r.Context(), request.URL, userID)
 
+	shortURL, err := h.buildShortURL(shortKey)
+	if err != nil {
+		logger.Sugar.Errorf("Failed to build short URL: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	response := struct {
 		Result string `json:"result"`
 	}{
-		Result: h.config.BaseURL + "/" + shortKey,
+		Result: shortURL,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -58,7 +89,11 @@ func (h *URLHandler) createJSONShortURL(w http.ResponseWriter, r *http.Request) 
 	} else {
 		w.WriteHeader(http.StatusCreated)
 	}
-	json.NewEncoder(w).Encode(response)
+
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		logger.Sugar.Errorf("Failed to encode response: %v", err)
+		return
+	}
 }
 
 func (h *URLHandler) createShortURL(w http.ResponseWriter, r *http.Request) {
@@ -67,7 +102,7 @@ func (h *URLHandler) createShortURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, ok := r.Context().Value(middleware.UserIDContextKey).(string)
+	userID, ok := h.getUserID(r.Context())
 	if !ok {
 		logger.Sugar.Error("user ID not found in context")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -88,8 +123,14 @@ func (h *URLHandler) createShortURL(w http.ResponseWriter, r *http.Request) {
 	input := string(body)
 	w.Header().Set("Content-Type", defaultContentType)
 
-	shortURL, isDuplicate := h.shortener.Shorten(r.Context(), input, userID)
-	resultURL := h.config.BaseURL + "/" + shortURL
+	shortKey, isDuplicate := h.shortener.Shorten(r.Context(), input, userID)
+
+	resultURL, err := h.buildShortURL(shortKey)
+	if err != nil {
+		logger.Sugar.Errorf("Failed to build short URL: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	w.Header().Set("Content-Type", defaultContentType)
 	if isDuplicate {
@@ -97,7 +138,11 @@ func (h *URLHandler) createShortURL(w http.ResponseWriter, r *http.Request) {
 	} else {
 		w.WriteHeader(http.StatusCreated)
 	}
-	w.Write([]byte(resultURL))
+
+	if _, err := w.Write([]byte(resultURL)); err != nil {
+		logger.Sugar.Errorf("Failed to write response: %v", err)
+		return
+	}
 }
 
 func (h *URLHandler) getURL(w http.ResponseWriter, r *http.Request) {
@@ -123,16 +168,16 @@ func (h *URLHandler) getURL(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *URLHandler) GetURLs(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
-	if !ok || userID == "" {
-		// Если userID нет в контексте или он пустой - возвращаем 401
+	userID, ok := h.getUserID(r.Context())
+	if !ok {
+		// Если userID нет в контексте - возвращаем 401 Unauthorized
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
 	urls, err := h.shortener.GetUserURLs(r.Context(), userID)
 	if err != nil {
-		logger.Sugar.Error(err)
+		logger.Sugar.Errorf("failed to get user urls: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -149,20 +194,29 @@ func (h *URLHandler) GetURLs(w http.ResponseWriter, r *http.Request) {
 	}, len(urls))
 
 	for i, url := range urls {
+		shortURL, err := h.buildShortURL(url.ShortURL)
+		if err != nil {
+			logger.Sugar.Errorf("Failed to build short URL: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
 		response[i] = struct {
 			ShortURL    string `json:"short_url"`
 			OriginalURL string `json:"original_url"`
 		}{
-			ShortURL:    h.config.BaseURL + "/" + url.ShortURL,
+			ShortURL:    shortURL,
 			OriginalURL: url.OriginalURL,
 		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
+
 	if err := json.NewEncoder(w).Encode(response); err != nil {
-		logger.Sugar.Error(err)
+		logger.Sugar.Errorf("failed to encode response: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 }
 
@@ -176,7 +230,8 @@ func (h *URLHandler) PingDB(w http.ResponseWriter, r *http.Request) {
 
 func (h *URLHandler) ShortenBatch(w http.ResponseWriter, r *http.Request) {
 	logger.Sugar.Info("ShortenBatch called")
-	userID, ok := r.Context().Value(middleware.UserIDContextKey).(string)
+
+	userID, ok := h.getUserID(r.Context())
 	if !ok {
 		logger.Sugar.Error("user ID not found in context")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -219,8 +274,8 @@ func (h *URLHandler) DeleteURLs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, ok := r.Context().Value(middleware.UserIDContextKey).(string)
-	if !ok || userID == "" {
+	userID, ok := h.getUserID(r.Context())
+	if !ok {
 		logger.Sugar.Warn("Unauthorized access to delete URLs")
 		w.WriteHeader(http.StatusUnauthorized)
 		return
