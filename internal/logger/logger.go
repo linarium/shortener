@@ -5,15 +5,19 @@ import (
 	"log"
 )
 
-var Sugar *zap.SugaredLogger = zap.NewNop().Sugar()
+var Sugar *zap.SugaredLogger
 
-func Initialize(opts ...zap.Option) {
-	cfg := zap.NewDevelopmentConfig()
-
-	logger, err := cfg.Build(opts...)
+func Initialize() {
+	logger, err := zap.NewDevelopment()
 	if err != nil {
 		log.Fatalf("Ошибка при инициализации логгера: %v", err)
 	}
 
 	Sugar = logger.Sugar()
+}
+
+func Sync() {
+	if Sugar != nil {
+		_ = Sugar.Sync()
+	}
 }

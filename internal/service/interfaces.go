@@ -21,10 +21,12 @@ func NewStorage(ctx context.Context, cfg config.Config) (Storage, error) {
 type Storage interface {
 	SaveShortURL(ctx context.Context, model models.URL) error
 	SaveManyURLS(ctx context.Context, models []models.URL) error
-	GetLongURL(ctx context.Context, short string) (string, bool)
+	GetAll(ctx context.Context, userID string) ([]models.URL, error)
+	GetLongURL(ctx context.Context, short string) (string, bool, bool)
 	FindShortURLByOriginal(ctx context.Context, original string) (string, bool)
 	Ping(ctx context.Context) error
 	Close() error
+	DeleteURLs(ctx context.Context, userID string, shortURLs []string) error
 }
 
 func (s *DBStorage) FindShortURLByOriginal(ctx context.Context, original string) (string, bool) {

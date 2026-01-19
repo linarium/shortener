@@ -12,7 +12,7 @@ import (
 type FileStorage struct {
 	file   *os.File
 	writer *bufio.Writer
-	memory MemoryStorage
+	memory *MemoryStorage
 }
 
 func NewFileStorage(filePath string) (*FileStorage, error) {
@@ -38,11 +38,11 @@ func NewFileStorage(filePath string) (*FileStorage, error) {
 	return &FileStorage{
 		file:   file,
 		writer: bufio.NewWriter(file),
-		memory: MemoryStorage{data: data},
+		memory: &MemoryStorage{data: data},
 	}, nil
 }
 
-func (s *FileStorage) GetLongURL(ctx context.Context, short string) (string, bool) {
+func (s *FileStorage) GetLongURL(ctx context.Context, short string) (string, bool, bool) {
 	return s.memory.GetLongURL(ctx, short)
 }
 
@@ -73,4 +73,12 @@ func (s *FileStorage) SaveManyURLS(ctx context.Context, models []models.URL) err
 	}
 
 	return s.memory.SaveManyURLS(ctx, models)
+}
+
+func (s *FileStorage) GetAll(ctx context.Context, userID string) ([]models.URL, error) {
+	return s.memory.GetAll(ctx, userID)
+}
+
+func (s *FileStorage) DeleteURLs(ctx context.Context, userID string, shortURLs []string) error {
+	return s.memory.DeleteURLs(ctx, userID, shortURLs)
 }
